@@ -8,7 +8,7 @@ You need to download GeckoDriver For example running the command ```pacman -S ge
 You also need selenium: ```pip install selenium```.
 
 # Debugging
-Firstly there is one massively helpful tool for debugging. That is making the browser emulator visible. Go into the file *geckodriver.py* and comment out this line ```firefox_options.add_argument("--headless")```. There are comments above this line to make it easier to spot.
+A helpful tool for debugging is making the browser emulator visible. Go into the file *geckodriver.py* and comment out this line ```firefox_options.add_argument("--headless")```. There are comments above this line to make it easier to spot.
 
 There is a known issue with this code. That is the way it waits for sites to load. Currently this is implemented through calls to ```time.sleep()``` which is prone to errors since every computers loading times are different. In the calls to functions ```geckodriver.selenium_login()``` and ```geckodriver.raw_html()``` you can change these times through arguments. The calls to these functions are located in *scratchdown.py*. Try increasing the wait times and see if it solves the problem.
 
