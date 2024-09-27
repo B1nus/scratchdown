@@ -3,7 +3,7 @@ Download all of your scratch projects fast and easy
 
 This program uses selenium and GeckoDriver in order to emulate a browser and access the ids of your projects. By default this emulator is hidden and runs in the background, but you can make it visible as explained in [Debugging](#Debugging).
 # Dependencies
-You need to download GeckoDriver For example running the command ```pacman -S geckodriver```on Archlinux. Then you need to change the constant ```GECKO_DRIVER_PATH = ``` located in *geckodriver.py* to the path of GeckoDriver's executable. Get the path by runnig the command ```which geckodriver```.
+You need to download GeckoDriver For example running the command ```pacman -S geckodriver``` on Archlinux. Then you need to change the constant ```GECKO_DRIVER_PATH = ``` located in *geckodriver.py* to the path of GeckoDriver's executable. Get the path by runnig the command ```which geckodriver```.
 
 You also need selenium: ```pip install selenium```.
 
