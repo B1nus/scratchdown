@@ -13,7 +13,7 @@ Run ```python scratchdown.py``` and follow the instructions.
 # Debugging
 A helpful tool for debugging is making the browser emulator visible. Go into the file *geckodriver.py* and comment out this line ```firefox_options.add_argument("--headless")```. There are comments above this line to make it easier to spot.
 
-There is a known issue with this code. That is the way it waits for sites to load. Currently this is implemented through calls to ```time.sleep()``` which is prone to errors since every computers loading times are different. In the calls to functions ```geckodriver.selenium_login()``` and ```geckodriver.raw_html()``` you can change these times through arguments. The calls to these functions are located in *scratchdown.py*. Try increasing the wait times and see if it solves the problem.
+There is a known issue with this code. That is the way it waits for sites to load. Currently this is implemented through calls to ```time.sleep()``` which is prone to errors since every computers loading times are different. These wait times are set in the declarations of the functions ```selenium_login()``` and ```raw_html()``` in the file ```geckodriver.py```. Try increasing the wait times and see if it solves the problem.
 
 # Credit
 Massive credit to TimMcCool for [scratchattach](https://github.com/TimMcCool/scratchattach). I used his code as reference for much of my code. Some of the code is more or less copied from scratchattach so thank you TimMcCool, I learned a lot from your code.
