@@ -17,18 +17,18 @@ print("\nI will download projects into {}\n".format(os.path.abspath(download_dir
 username = input("Enter your username: ")
 password = getpass.getpass("Enter your password: ")
 
-print("Logging in through emulator...")
-emulator = Emulator(download_dir, trash, headless=False)
+print("\nLogging in through emulator...")
+emulator = Emulator(download_dir, trash, headless=not debug)
 emulator.login(username, password)
 
 
-print("Beginning download")
+print("Beginning download...")
 emulator.go_to_page("https://scratch.mit.edu/mystuff/")
 emulator.load_more()
 emulator.download_projects()
 
 if trash:
-    print("Beginning download of trashed projects")
+    print("\nBeginning download of trashed projects...")
     emulator.go_to_page("https://scratch.mit.edu/mystuff/#trash")
     emulator.load_more()
     emulator.download_projects(name_prefix="trashed_")
