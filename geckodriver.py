@@ -3,92 +3,134 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import id_parser
+import os
 import time
 
 LOGIN_URL = "https://scratch.mit.edu/login/"
-GECKO_DRIVER_PATH = "/usr/bin/geckodriver"
-USERNAME_HTML_ID = "id_username"
-PASSWORD_HTML_ID = "id_password"
+PROJECT_PAGE = "https://scratch.mit.edu/projects/{}/editor"
+GECKODRIVER_PATH = "/usr/bin/geckodriver"
+
+# Constants that could change if scratch devs decide to change paths
+USERNAME_FIELD_ID = "id_username"
+PASSWORD_FIELD_ID = "id_password"
 LOADMORE_XPATH = "//*[@data-control='load-more']"
+FILE_DROPDOWN_XPATH = '//div[contains(@class, "menu-bar_menu-bar-item_NKeCD")][3]'
+SAVE_BUTTON_XPATH = '//li[contains(@class, "menu_hoverable_ZLcfJ")][5]'
+TITLE_FIELD_XPATH = '//input[@placeholder="Project title here"]'
+LOADSCREEN_XPATH = '//div[@class="loader_background_KvT9o"]'
 
-# Initialize Geckodriver and selenium
-def selenium_init():
-    firefox_options = Options()
+class Emulator:
+    def __init__(self, download_dir, trash, headless=True):
+        options = Options()
+        options.set_preference("browser.download.folderList", 2)
+        options.set_preference("browser.download.manager.showWhenStarting", False)
+        options.set_preference("browser.download.dir", download_dir)  # Set download directory
+        options.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/x-scratch-project")
 
-    # DEBUGGING:
-    #
-    # To debug you should comment out this line of code. Now the browser
-    # emulator will be visible and problems will be easier to debug.
-    firefox_options.add_argument("--headless")
+        # DEBUGGING:
+        #
+        # To debug you should comment out this line of code. Now the browser
+        # emulator will be visible and problems will be easier to debug.
+        if headless:
+            options.add_argument("--headless")
 
-    # Initialize the Firefox browser using GeckoDriver
-    service = Service(GECKO_DRIVER_PATH)
-    driver = webdriver.Firefox(service=service, options=firefox_options)
+        service = Service(GECKODRIVER_PATH)
 
-    return driver
+        self.driver = webdriver.Firefox(service=service, options=options)
+        self.trash = trash
+        self.download_dir = download_dir
 
-# Returns the same driver but logged in
-def selenium_login(username, password, driver, login_wait_time=1):
-    # Open the Scratch login page
-    driver.get(LOGIN_URL)
+    def login(self, username, password):
+        # Open the Scratch login page
+        self.driver.get(LOGIN_URL)
 
-    username_field = driver.find_element(By.ID, USERNAME_HTML_ID)
-    password_field = driver.find_element(By.ID, PASSWORD_HTML_ID)
+        username_field =self.driver.find_element(By.ID, USERNAME_FIELD_ID)
+        password_field =self.driver.find_element(By.ID, PASSWORD_FIELD_ID)
 
-    # Write username
-    username_field.click()
-    username_field.send_keys(username)
-    # Write password
-    password_field.click()
-    password_field.send_keys(password)
+        # Write username
+        username_field.click()
+        username_field.send_keys(username)
+        # Write password
+        password_field.click()
+        password_field.send_keys(password)
 
-    # Submit the form
-    password_field.send_keys(Keys.RETURN)
+        # Submit the form
+        password_field.send_keys(Keys.RETURN)
 
-    print("\nLogging in...")
-    # Wait untill logged in
-    time.sleep(login_wait_time)
+        # Check if login was successful
+        try:
+            WebDriverWait(self.driver, 2).until(lambda d: d.current_url != LOGIN_URL )
+        except:
+            self.driver.quit()
+            exit("\nInvalid login credentials\n")
 
-    return driver
+    def go_to_page(self, page):
+        # Navigate to the page
+        self.driver.get(page)
+        time.sleep(1)
+        WebDriverWait(self.driver, 20).until(lambda d: d.execute_script('return document.readyState') == 'complete')
 
-# Use selenium to get the session_id
-def session_id(driver):
-    # After login, get cookies from the browser
-    cookies = driver.get_cookies()
+    # Repeatedly click loadmore until all projects are visible and return all ids
+    def load_more(self):
+        while True:
+            time.sleep(1)
+            try:
+                load_more_button = WebDriverWait(self.driver, 2).until(
+                        EC.element_to_be_clickable((By.XPATH, LOADMORE_XPATH))
+                        )
+            except:
+                return
 
-    # Find the session ID in cookies
-    session_id = None
-    for cookie in cookies:
-        if cookie['name'] == 'scratchsessionsid':  # Cookie name for Scratch session ID
-            session_id = cookie['value']
-            break
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            load_more_button.click()
 
-    return session_id
+    # Download all projects currently shown on screen
+    def download_projects(self, name_prefix=""):
+        ids = id_parser.find_ids_in_raw_html(self.driver.page_source)
 
-# Use selenium driver to get the raw html of a page
-def raw_html(page, driver, page_load_wait_time=1, loadmore_wait_time=1):
-    # Navigate to the page
-    driver.get(page)
+        for id in ids:
+            self.download_project(id, name_prefix=name_prefix)
 
-    print("Loading page...")
+    def download_project(self, id, name_prefix=""):
+        # Make filename based on command line argument
+        filename = name_prefix + str(id)
 
-    # Wait for the page to load
-    time.sleep(page_load_wait_time)
+        print("Downloading {}...".format(os.path.join(self.download_dir, filename)))
 
-    while True:
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        load_more_button = driver.find_element(By.XPATH, LOADMORE_XPATH)
+        # Load Project and wait
+        self.driver.get(PROJECT_PAGE.format(id))
 
-        # Break out of the loop if there is no Load More Button
-        if load_more_button.location_once_scrolled_into_view['x'] == 0:
-            break
+        # Wait until Loading Screen is gone
+        time.sleep(1)
+        try:
+            WebDriverWait(self.driver,20).until(
+                    EC.invisibility_of_element_located((By.XPATH, LOADSCREEN_XPATH))
+                    )
+        except:
+            exit("Timed Out. Sorry ):")
 
-        print("Loading More Projects...")
-        load_more_button.click()
+        # Save old title
+        title_field = self.driver.find_element(By.XPATH, TITLE_FIELD_XPATH)
+        title = title_field.get_attribute("value")
 
-        # Wait for the new projects to load and check if the button is still there
-        time.sleep(loadmore_wait_time)
+        # Set new title
+        title_field.click()
+        title_field.send_keys(Keys.CONTROL + 'a')
+        title_field.send_keys(filename)
 
-    # Return the raw html data
-    raw_html = driver.page_source
-    return raw_html
+        # Press Save to Computer
+        file_dropdown = self.driver.find_element(By.XPATH, FILE_DROPDOWN_XPATH)
+        file_dropdown.click()
+        save_button = WebDriverWait(self.driver, 1).until(
+                EC.element_to_be_clickable((By.XPATH, SAVE_BUTTON_XPATH))
+                )
+        save_button.click()
+
+        # Give back the old title
+        title_field.click()
+        title_field.send_keys(Keys.CONTROL + 'a')
+        title_field.send_keys(title + Keys.ENTER)
+        file_dropdown.click()

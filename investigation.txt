@@ -1,4 +1,0 @@
-The download button in scratch does not download the project. It still works even though we're offline.
-Also, installing is super fast. It's as if, we already have the file in memory. Wink.
-
-So, where is it? where is this file located. It must be somewhere, totally unchanged, ready to be grabed by me. (;
