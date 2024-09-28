@@ -23,15 +23,20 @@ emulator.login(username, password)
 
 
 print("Beginning download...")
-emulator.go_to_page("https://scratch.mit.edu/mystuff/")
+# Shared Projects
+emulator.go_to_page("https://scratch.mit.edu/mystuff/#shared")
 emulator.load_more()
-emulator.download_projects()
+emulator.download_projects("{id}_SHARED - {title}")
+# Unshared Projects
+emulator.go_to_page("https://scratch.mit.edu/mystuff/#unshared")
+emulator.load_more()
+emulator.download_projects("{id}_UNSHARED - {title}")
 
 if trash:
     print("\nBeginning download of trashed projects...")
     emulator.go_to_page("https://scratch.mit.edu/mystuff/#trash")
     emulator.load_more()
-    emulator.download_projects(name_prefix="trashed_")
+    emulator.download_projects("{id}_TRASHED - {title}")
 
 emulator.driver.quit()
 exit("\nscratchdown is done downloading to {}!\n".format(download_dir))

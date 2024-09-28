@@ -21,9 +21,11 @@ FILE_DROPDOWN_XPATH = '//div[contains(@class, "menu-bar_menu-bar-item_NKeCD")][3
 SAVE_BUTTON_XPATH = '//li[contains(@class, "menu_hoverable_ZLcfJ")][5]'
 TITLE_FIELD_XPATH = '//input[@placeholder="Project title here"]'
 LOADSCREEN_XPATH = '//div[@class="loader_background_KvT9o"]'
+# L + Ratio windows users
+WINDOWS_NOT_ALLOWED_CHARS = set('<>:\"/\\|?*') # This is cursed
 
 class Emulator:
-    def __init__(self, download_dir, trash, headless=True):
+    def __init__(self, download_dir, trash, headless=True, timeout=120):
         options = Options()
         options.set_preference("browser.download.folderList", 2)
         options.set_preference("browser.download.manager.showWhenStarting", False)
@@ -42,6 +44,7 @@ class Emulator:
         self.driver = webdriver.Firefox(service=service, options=options)
         self.trash = trash
         self.download_dir = download_dir
+        self.timeout = timeout
 
     def login(self, username, password):
         # Open the Scratch login page
@@ -71,14 +74,14 @@ class Emulator:
         # Navigate to the page
         self.driver.get(page)
         time.sleep(1)
-        WebDriverWait(self.driver, 20).until(lambda d: d.execute_script('return document.readyState') == 'complete')
+        WebDriverWait(self.driver, self.timeout).until(lambda d: d.execute_script('return document.readyState') == 'complete')
 
     # Repeatedly click loadmore until all projects are visible and return all ids
     def load_more(self):
         while True:
-            time.sleep(1)
             try:
-                load_more_button = WebDriverWait(self.driver, 2).until(
+                WebDriverWait(self.driver, self.timeout).until(lambda d: d.execute_script('return document.readyState') == 'complete')
+                load_more_button = WebDriverWait(self.driver, 1).until(
                         EC.element_to_be_clickable((By.XPATH, LOADMORE_XPATH))
                         )
             except:
@@ -86,27 +89,34 @@ class Emulator:
 
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             load_more_button.click()
+            time.sleep(1)
 
     # Download all projects currently shown on screen
-    def download_projects(self, name_prefix=""):
+    def download_projects(self, title_format="{id} {name}"):
         ids = id_parser.find_ids_in_raw_html(self.driver.page_source)
 
         for id in ids:
-            self.download_project(id, name_prefix=name_prefix)
+            self.download_project(id, title_format)
 
-    def download_project(self, id, name_prefix=""):
-        # Make filename based on command line argument
-        filename = name_prefix + str(id)
+    def compile_filename(filename):
+        # Remove trailing whitespace and make mulitspaces into single spaces
+        filename = ' '.join(filename.split())
+        
+        for c in WINDOWS_NOT_ALLOWED_CHARS:
+            filename = filename.replace(c, '_')
 
-        print("Downloading {}...".format(os.path.join(self.download_dir, filename)))
+        return filename
+
+    def download_project(self, id, title_format):
+
+        print("Downloading {} into ".format(PROJECT_PAGE.format(id)), end='')
 
         # Load Project and wait
         self.driver.get(PROJECT_PAGE.format(id))
 
         # Wait until Loading Screen is gone
-        time.sleep(1)
         try:
-            WebDriverWait(self.driver,20).until(
+            WebDriverWait(self.driver,self.timeout).until(
                     EC.invisibility_of_element_located((By.XPATH, LOADSCREEN_XPATH))
                     )
         except:
@@ -115,6 +125,13 @@ class Emulator:
         # Save old title
         title_field = self.driver.find_element(By.XPATH, TITLE_FIELD_XPATH)
         title = title_field.get_attribute("value")
+
+        # Filename. Account for characters not allowed by windows
+        filename = title_format.format(id=id, title=title)
+        filename = Emulator.compile_filename(filename)
+
+        path = os.path.join(self.download_dir, filename + ".sb3")
+        print(path)
 
         # Set new title
         title_field.click()
@@ -134,3 +151,14 @@ class Emulator:
         title_field.send_keys(Keys.CONTROL + 'a')
         title_field.send_keys(title + Keys.ENTER)
         file_dropdown.click()
+
+        # Wait for the file to download
+        starttime = time.time()
+        while True:
+            if os.path.exists(path):
+                break
+            elif time.time() - starttime > self.timeout:
+                print("This shouldn't happen. But ok.")
+                break
+            time.sleep(0.5)
+
