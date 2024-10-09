@@ -2,7 +2,7 @@ import os
 
 # Validate command line arguments. don't forget to set args = os.sys.argv[1:] so we skip the first element
 def validate(args):
-    if args[0] == "--help" or args[0] == "help" or args[0] == "-h" or args[0] == "-help":
+    if len(args) == 0 or args[0] == "--help" or args[0] == "help" or args[0] == "-h" or args[0] == "-help":
         exit("""
 scratchdown.py - Download all of your Scratch Projects fast and easy.
 
