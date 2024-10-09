@@ -8,10 +8,8 @@ scratchdown.py - Download all of your Scratch Projects fast and easy.
 
 Usage: 'python scratchdown.py [download_folder] -[flags]'
 
-Flags: use flag -t to download trashed projects and flag -d to enable the browser emulator gui (debugger mode).
-
-Please Not: Do not separate the flags if you're using both write '-td' or '-dt'. 
-              """)
+Flags: use flag -t to download trashed projects and flag -d to enable the browser emulator gui (debugger mode). You can use both at the same time with flag '-dt' or flag '-td'.
+""")
     if len(args) == 0:
         exit("Missing argument. Argument for download directory missing. Example 'python scratchdown.py ./projects/'")
     if len(args) > 2:
